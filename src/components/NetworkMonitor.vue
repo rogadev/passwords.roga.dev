@@ -1,30 +1,25 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 
 // --- State ---
 const showMonitor = ref(false);
 const testStatus = ref('idle'); // idle, testing, success, error
 const latency = ref(null);
-const requestLog = ref([]); // Array to store logged requests { id, method, url, timestamp }
+const requestLog = ref([]);
 const originalFetch = ref(null);
-// Use module-scope variables for XHR originals as they modify prototypes
 let originalXHROpen = null;
 let originalXHRSend = null;
 let requestCounter = 0;
 
+const logCount = computed(() => requestLog.value.length);
+
 // --- Network Test --- //
-/**
- * Runs a simple network latency test by sending a HEAD request to Google.
- * Updates the test status and latency refs.
- * Logs the test attempt, result, or error to the request log.
- */
 async function runNetworkTest() {
   testStatus.value = 'testing';
   latency.value = null;
   const startTime = performance.now();
 
   try {
-    // Log the request before making it
     requestCounter++;
     const testUrl = `https://www.google.com?t=${Date.now()}`;
     const logEntry = {
@@ -37,18 +32,16 @@ async function runNetworkTest() {
 
     requestLog.value.unshift(logEntry);
 
-    // Use 'no-cors' to ping an external resource
     await fetch(testUrl, {
-      method: 'HEAD', // Use HEAD to minimize data transfer
+      method: 'HEAD',
       mode: 'no-cors',
-      cache: 'no-store', // Avoid hitting browser cache
+      cache: 'no-store',
     });
 
     const endTime = performance.now();
     latency.value = Math.round(endTime - startTime);
     testStatus.value = 'success';
 
-    // Log the response
     requestCounter++;
     requestLog.value.unshift({
       id: requestCounter,
@@ -58,13 +51,11 @@ async function runNetworkTest() {
       timestamp: new Date()
     });
   } catch (error) {
-    // Errors in 'no-cors' are typically opaque network errors.
     console.warn('Network test failed (likely network error):', error);
     const endTime = performance.now();
-    latency.value = Math.round(endTime - startTime); // Still record time taken until failure
+    latency.value = Math.round(endTime - startTime);
     testStatus.value = 'error';
 
-    // Log the error
     requestCounter++;
     requestLog.value.unshift({
       id: requestCounter,
@@ -77,13 +68,8 @@ async function runNetworkTest() {
 }
 
 // --- Request Interception --- //
-/**
- * Starts intercepting global fetch and XMLHttpRequest calls.
- * Wraps the native functions to log requests.
- */
 function startIntercepting() {
-  // --- Fetch Interception ---
-  if (window.fetch && !originalFetch.value) { // Check if already wrapped
+  if (window.fetch && !originalFetch.value) {
     originalFetch.value = window.fetch;
     window.fetch = async (...args) => {
       const url = args[0] instanceof Request ? args[0].url : args[0];
@@ -91,24 +77,18 @@ function startIntercepting() {
       requestCounter++;
       const logEntry = { id: requestCounter, type: 'fetch', method, url: String(url), timestamp: new Date() };
       requestLog.value.unshift(logEntry);
-      // Limit log size
       if (requestLog.value.length > 50) {
         requestLog.value.pop();
       }
-      // Call original fetch
       return originalFetch.value.apply(window, args);
     };
-    console.log("[Network Monitor] Fetch interception started.");
   }
 
-  // --- XMLHttpRequest Interception --- 
-  if (window.XMLHttpRequest && !originalXHROpen && !originalXHRSend) { // Check if already wrapped
+  if (window.XMLHttpRequest && !originalXHROpen && !originalXHRSend) {
     originalXHROpen = window.XMLHttpRequest.prototype.open;
     originalXHRSend = window.XMLHttpRequest.prototype.send;
 
     window.XMLHttpRequest.prototype.open = function (method, url, ...rest) {
-      // Store method and url on the instance for retrieval in send wrapper,
-      // as the send function doesn't have direct access to these arguments.
       this._requestMethod = method;
       this._requestURL = url;
       return originalXHROpen.apply(this, [method, url, ...rest]);
@@ -121,151 +101,243 @@ function startIntercepting() {
           id: requestCounter,
           type: 'XHR',
           method: this._requestMethod,
-          url: String(this._requestURL), // Ensure URL is a string
+          url: String(this._requestURL),
           timestamp: new Date()
         };
         requestLog.value.unshift(logEntry);
         if (requestLog.value.length > 50) {
           requestLog.value.pop();
         }
-      } else {
-        // Fallback logging if open wasn't wrapped correctly or called unusually
-        console.warn("[Network Monitor] Intercepted XHR send() called, but method/URL not captured via open wrapper.");
       }
-      // Call original send
       return originalXHRSend.apply(this, args);
     };
-    console.log("[Network Monitor] XHR interception started.");
   }
 }
 
-/**
- * Stops intercepting network requests and restores the original
- * global fetch and XMLHttpRequest functions.
- */
 function stopIntercepting() {
-  // --- Fetch Restoration ---
   if (originalFetch.value) {
     window.fetch = originalFetch.value;
-    originalFetch.value = null; // Clear the stored reference
-    console.log("[Network Monitor] Fetch interception stopped.");
+    originalFetch.value = null;
   }
-  // --- XHR Restoration ---
   if (originalXHROpen) {
     window.XMLHttpRequest.prototype.open = originalXHROpen;
-    originalXHROpen = null; // Clear the stored reference
+    originalXHROpen = null;
   }
   if (originalXHRSend) {
     window.XMLHttpRequest.prototype.send = originalXHRSend;
-    originalXHRSend = null; // Clear the stored reference
-    console.log("[Network Monitor] XHR interception stopped.");
+    originalXHRSend = null;
   }
 }
 
+function clearLog() {
+  requestLog.value = [];
+}
+
 onMounted(() => {
-  // Start intercepting when component mounts
   startIntercepting();
 });
 
 onUnmounted(() => {
-  // Clean up wrappers when component is destroyed
   stopIntercepting();
 });
-
 </script>
 
 <template>
-  <div>
-    <button @click="showMonitor = !showMonitor"
-      class="w-full px-5 py-3 text-left font-medium text-blue-800 bg-blue-50 rounded-xl hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 flex justify-between items-center transition-all duration-300 group mb-3 border border-blue-100"
-      aria-controls="network-monitor-panel" :aria-expanded="showMonitor">
-      <span class="group-hover:text-blue-900 text-base sm:text-lg transition-colors">Network Activity Monitor</span>
-      <svg class="w-5 h-5 transform transition-transform duration-300 text-blue-600 group-hover:text-blue-800"
-        :class="{ 'rotate-180': showMonitor }" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-        stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-      </svg>
+  <div class="glass-card rounded-2xl overflow-hidden">
+    <!-- Trigger button -->
+    <button 
+      @click="showMonitor = !showMonitor"
+      class="w-full flex items-center justify-between p-5 sm:p-6 transition-all duration-200 hover:bg-zinc-800/30 focus-ring rounded-2xl group"
+      :class="showMonitor ? 'bg-zinc-800/20' : ''"
+      aria-controls="network-monitor-panel" 
+      :aria-expanded="showMonitor"
+    >
+      <div class="flex items-center gap-3">
+        <div class="p-2 rounded-lg bg-zinc-800 group-hover:bg-zinc-700 transition-colors relative">
+          <svg class="w-5 h-5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z" />
+          </svg>
+          <!-- Activity indicator -->
+          <span v-if="logCount > 0" class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        </div>
+        <div class="text-left">
+          <span class="block text-sm sm:text-base font-medium text-zinc-200 group-hover:text-zinc-100 transition-colors">
+            Network Activity Monitor
+          </span>
+          <span class="text-xs text-zinc-500">
+            {{ logCount > 0 ? `${logCount} request${logCount !== 1 ? 's' : ''} logged` : 'No activity detected' }}
+          </span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span v-if="logCount > 0" class="badge badge-success">{{ logCount }}</span>
+        <svg 
+          class="w-5 h-5 text-zinc-500 transition-transform duration-300" 
+          :class="{ 'rotate-180': showMonitor }" 
+          fill="none" 
+          viewBox="0 0 24 24" 
+          stroke="currentColor"
+          stroke-width="1.5"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+        </svg>
+      </div>
     </button>
 
-    <div v-show="showMonitor" id="network-monitor-panel"
-      class="p-5 sm:p-6 border border-slate-200 rounded-xl bg-white shadow-sm space-y-6 transition-all duration-300"
-      role="region" aria-labelledby="network-monitor-heading">
-      <p id="network-monitor-heading" class="text-sm text-slate-600">
-        This tool monitors application network requests (<code
-          class="bg-slate-100 px-1.5 py-0.5 rounded-md text-xs">fetch</code>/<code
-          class="bg-slate-100 px-1.5 py-0.5 rounded-md text-xs">XHR</code>)
-        to demonstrate that password generation occurs locally. It cannot monitor all browser activity.
-      </p>
+    <!-- Collapsible content -->
+    <Transition name="collapse">
+      <div 
+        v-show="showMonitor" 
+        id="network-monitor-panel"
+        class="border-t border-zinc-800/50"
+        role="region" 
+        aria-labelledby="network-monitor-heading"
+      >
+        <div class="p-5 sm:p-6 space-y-6">
+          <!-- Explanation -->
+          <div class="flex items-start gap-3 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+            <svg class="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+            </svg>
+            <p id="network-monitor-heading" class="text-xs text-zinc-400 leading-relaxed">
+              This monitors network requests to prove password generation happens locally. 
+              <span class="text-emerald-400 font-medium">Your passwords never leave your device.</span>
+            </p>
+          </div>
 
-      <!-- Network Test Section -->
-      <div class="pt-4 border-t border-slate-200">
-        <h4 class="text-base font-medium text-blue-800 mb-3">Latency Test</h4>
-        <div class="flex items-center gap-4 flex-wrap">
-          <button @click="runNetworkTest" :disabled="testStatus === 'testing'"
-            class="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm rounded-lg hover:from-blue-600 hover:to-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-blue-500 shadow-sm">
-            <span v-if="testStatus === 'testing'">
-              <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg"
-                fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                </path>
+          <!-- Latency Test -->
+          <div class="space-y-3">
+            <h4 class="text-sm font-medium text-zinc-300 flex items-center gap-2">
+              <svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
               </svg>
-              Testing...
-            </span>
-            <span v-else>Ping Google</span>
-          </button>
-          <div v-if="testStatus === 'success'" class="text-sm text-green-700 bg-green-50 px-3 py-1.5 rounded-lg"
-            aria-live="polite">
-            Approx latency: <strong>{{ latency }} ms</strong>
+              Network Test
+            </h4>
+            <div class="flex flex-wrap items-center gap-3">
+              <button 
+                @click="runNetworkTest" 
+                :disabled="testStatus === 'testing'"
+                class="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 focus-ring disabled:opacity-50 disabled:cursor-not-allowed btn-primary"
+              >
+                <span v-if="testStatus === 'testing'" class="flex items-center gap-2">
+                  <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Testing...
+                </span>
+                <span v-else>Ping Google</span>
+              </button>
+              
+              <div 
+                v-if="testStatus === 'success'" 
+                class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20"
+                aria-live="polite"
+              >
+                <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span class="text-sm text-emerald-400 font-medium">{{ latency }} ms</span>
+              </div>
+              
+              <div 
+                v-if="testStatus === 'error'" 
+                class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20"
+                aria-live="polite"
+              >
+                <svg class="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <span class="text-sm text-rose-400 font-medium">Failed ({{ latency }} ms)</span>
+              </div>
+
+              <span v-if="testStatus === 'idle'" class="text-xs text-zinc-500">
+                Test your connection
+              </span>
+            </div>
           </div>
-          <div v-if="testStatus === 'error'" class="text-sm text-red-700 bg-red-50 px-3 py-1.5 rounded-lg"
-            aria-live="polite">
-            Test failed (after {{ latency }} ms)
-          </div>
-          <div v-if="testStatus === 'idle'" class="text-sm text-slate-500">
-            (Run a quick test)
+
+          <!-- Request Log -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-medium text-zinc-300 flex items-center gap-2">
+                <svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
+                </svg>
+                Request Log
+              </h4>
+              <button 
+                v-if="logCount > 0" 
+                @click="clearLog"
+                class="text-xs font-medium text-zinc-500 hover:text-zinc-300 transition-colors focus-ring px-2 py-1 rounded"
+              >
+                Clear
+              </button>
+            </div>
+            
+            <div 
+              v-if="logCount === 0"
+              class="flex flex-col items-center justify-center py-8 text-center"
+            >
+              <div class="p-3 rounded-full bg-zinc-800/50 mb-3">
+                <svg class="w-6 h-6 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+              </div>
+              <p class="text-sm text-zinc-500">No network requests detected</p>
+              <p class="text-xs text-zinc-600 mt-1">Password generation is 100% local</p>
+            </div>
+            
+            <div 
+              v-else
+              class="max-h-48 overflow-y-auto rounded-xl bg-zinc-900/50 border border-zinc-800 divide-y divide-zinc-800/50"
+              aria-live="polite"
+            >
+              <div 
+                v-for="req in requestLog" 
+                :key="req.id"
+                class="p-3 flex flex-wrap items-center gap-2 text-xs font-mono"
+              >
+                <span class="text-zinc-600 w-6 text-right shrink-0">#{{ req.id }}</span>
+                <span 
+                  class="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide shrink-0"
+                  :class="{
+                    'bg-blue-500/20 text-blue-400': req.type === 'fetch',
+                    'bg-orange-500/20 text-orange-400': req.type === 'XHR',
+                    'bg-purple-500/20 text-purple-400': req.type === 'TEST',
+                    'bg-emerald-500/20 text-emerald-400': req.type === 'RESPONSE',
+                    'bg-rose-500/20 text-rose-400': req.type === 'ERROR'
+                  }"
+                >
+                  {{ req.method }}
+                </span>
+                <span class="text-zinc-400 truncate flex-1 min-w-0">{{ req.url }}</span>
+                <span class="text-zinc-600 shrink-0">{{ req.timestamp.toLocaleTimeString() }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      <!-- Request Log Section -->
-      <div class="pt-4 border-t border-slate-200">
-        <div class="flex justify-between items-center mb-3">
-          <h4 class="text-base font-medium text-blue-800">Application Network Log</h4>
-          <button v-if="requestLog.length > 0" @click="requestLog = []"
-            class="px-3 py-1 text-xs text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-red-500 shadow-sm">
-            Clear Log
-          </button>
-        </div>
-        <div v-if="requestLog.length === 0"
-          class="text-sm text-slate-500 italic px-3 py-5 bg-slate-50/80 rounded-lg text-center">
-          No network requests detected yet.
-        </div>
-        <div v-else
-          class="max-h-64 overflow-y-auto border border-slate-200 rounded-lg p-3 bg-slate-50/80 space-y-2 text-xs"
-          aria-live="polite">
-          <div v-for="req in requestLog" :key="req.id"
-            class="border-b border-slate-100 pb-2 last:border-b-0 font-mono flex flex-wrap items-center gap-x-2">
-            <span class="inline-block text-slate-400 w-6 text-right shrink-0">#{{ req.id }}</span>
-            <span
-              class="inline-block font-semibold px-1.5 py-0.5 rounded-md text-white text-[10px] leading-none shrink-0"
-              :class="{
-                'bg-gradient-to-r from-blue-500 to-blue-600': req.type === 'fetch',
-                'bg-gradient-to-r from-orange-500 to-orange-600': req.type === 'XHR',
-                'bg-gradient-to-r from-purple-500 to-purple-600': req.type === 'TEST',
-                'bg-gradient-to-r from-green-500 to-green-600': req.type === 'RESPONSE',
-                'bg-gradient-to-r from-red-500 to-red-600': req.type === 'ERROR'
-              }">
-              {{ req.method }}
-            </span>
-            <span class="break-all min-w-0 text-slate-700">{{ req.url }}</span>
-            <span class="text-slate-400 ml-auto whitespace-nowrap pl-2">({{ req.timestamp.toLocaleTimeString()
-            }})</span>
-          </div>
-        </div>
-      </div>
-
-    </div>
+    </Transition>
   </div>
 </template>
+
+<style scoped>
+.collapse-enter-active,
+.collapse-leave-active {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.collapse-enter-from,
+.collapse-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+
+.collapse-enter-to,
+.collapse-leave-from {
+  opacity: 1;
+  max-height: 1000px;
+}
+</style>

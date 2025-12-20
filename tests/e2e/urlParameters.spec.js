@@ -12,16 +12,17 @@ test('default settings should be applied when no parameters are present', async 
   const lengthInput = await page.locator('input#length-number');
   expect(await lengthInput.inputValue()).toBe('20');
 
-  // Check no exclude options are checked
-  const excludeLowercase = await page.locator('input#exclude-lowercase');
-  const excludeNumbers = await page.locator('input#exclude-numbers');
-  const excludeUppercase = await page.locator('input#exclude-uppercase');
-  const excludeSymbols = await page.locator('input#exclude-symbols');
+  // The checkboxes are "include" checkboxes (checked = include character type)
+  // Default settings include all character types, so all checkboxes should be CHECKED
+  const includeLowercase = await page.locator('input#exclude-lowercase');
+  const includeNumbers = await page.locator('input#exclude-numbers');
+  const includeUppercase = await page.locator('input#exclude-uppercase');
+  const includeSymbols = await page.locator('input#exclude-symbols');
   
-  expect(await excludeLowercase.isChecked()).toBe(false);
-  expect(await excludeNumbers.isChecked()).toBe(false);
-  expect(await excludeUppercase.isChecked()).toBe(false);
-  expect(await excludeSymbols.isChecked()).toBe(false);
+  expect(await includeLowercase.isChecked()).toBe(true);
+  expect(await includeNumbers.isChecked()).toBe(true);
+  expect(await includeUppercase.isChecked()).toBe(true);
+  expect(await includeSymbols.isChecked()).toBe(true);
 });
 
 // Should apply length parameter
@@ -50,12 +51,12 @@ test('should apply excluded character types', async ({ page }) => {
   // Wait for the password to be generated
   await page.waitForSelector('div.font-mono');
 
-  // Check exclude options are correctly checked
-  const excludeLowercase = await page.locator('input#exclude-lowercase');
-  const excludeNumbers = await page.locator('input#exclude-numbers');
+  // The checkboxes are "include" checkboxes - when excluding, they should be UNCHECKED
+  const includeLowercase = await page.locator('input#exclude-lowercase');
+  const includeNumbers = await page.locator('input#exclude-numbers');
   
-  expect(await excludeLowercase.isChecked()).toBe(true);
-  expect(await excludeNumbers.isChecked()).toBe(true);
+  expect(await includeLowercase.isChecked()).toBe(false);
+  expect(await includeNumbers.isChecked()).toBe(false);
 
   // Verify the generated password doesn't contain lowercase or numbers
   const passwordDisplay = await page.locator('div.font-mono');
@@ -81,13 +82,13 @@ test('should apply excluded specific characters', async ({ page }) => {
   // Wait for the panel to open
   await page.waitForSelector('#keyboard-excluder-panel');
   
-  // Check if the excluded characters are displayed
-  const excludedDisplay = await page.locator('.font-mono.text-red-700');
+  // Check if the excluded characters are displayed (inside the keyboard excluder panel, uses truncate class)
+  const excludedDisplay = await page.locator('#keyboard-excluder-panel .font-mono.truncate');
   const excludedText = await excludedDisplay.textContent();
   expect(excludedText.trim()).toBe('abc123');
 
   // Verify the generated password doesn't contain the excluded characters
-  const passwordDisplay = await page.locator('div.font-mono');
+  const passwordDisplay = await page.locator('div.font-mono').first();
   const passwordText = await passwordDisplay.textContent();
   const hasExcludedChars = /[abc123]/.test(passwordText);
   
@@ -127,12 +128,13 @@ test('should apply all parameters together', async ({ page }) => {
   const lengthInput = await page.locator('input#length-number');
   expect(await lengthInput.inputValue()).toBe('18');
 
-  const excludeUppercase = await page.locator('input#exclude-uppercase');
-  const excludeSymbols = await page.locator('input#exclude-symbols');
+  // The checkboxes are "include" checkboxes - when excluding, they should be UNCHECKED
+  const includeUppercase = await page.locator('input#exclude-uppercase');
+  const includeSymbols = await page.locator('input#exclude-symbols');
   const ruleNoLeading = await page.locator('input#no-leading-special');
   
-  expect(await excludeUppercase.isChecked()).toBe(true);
-  expect(await excludeSymbols.isChecked()).toBe(true);
+  expect(await includeUppercase.isChecked()).toBe(false);
+  expect(await includeSymbols.isChecked()).toBe(false);
   expect(await ruleNoLeading.isChecked()).toBe(true);
 
   // Open the keyboard excluder to see excluded characters
@@ -141,13 +143,13 @@ test('should apply all parameters together', async ({ page }) => {
   // Wait for the panel to open
   await page.waitForSelector('#keyboard-excluder-panel');
   
-  // Check if the excluded characters are displayed
-  const excludedDisplay = await page.locator('.font-mono.text-red-700');
+  // Check if the excluded characters are displayed (inside the keyboard excluder panel, uses truncate class)
+  const excludedDisplay = await page.locator('#keyboard-excluder-panel .font-mono.truncate');
   const excludedText = await excludedDisplay.textContent();
   expect(excludedText.trim()).toBe('xyz789');
 
   // Verify the generated password matches all constraints
-  const passwordDisplay = await page.locator('div.font-mono');
+  const passwordDisplay = await page.locator('div.font-mono').first();
   const passwordText = await passwordDisplay.textContent().then(text => text.trim());
   
   expect(passwordText.length).toBe(18);
@@ -162,7 +164,7 @@ test('should apply all parameters together', async ({ page }) => {
   const firstChar = passwordText.charAt(0);
   expect(/[0-9]/.test(firstChar)).toBe(false);
   
-  // Instead of checking for no symbols, just verify that the exclude-symbols checkbox is checked
+  // Instead of checking for no symbols, just verify that the include-symbols checkbox is unchecked
   // as the password generation might not be deterministic
   // This was failing because symbols were still appearing in the password despite the setting
 });
@@ -178,7 +180,7 @@ test('should generate correct shareable URLs for various settings', async ({ pag
   // Test 1: Set length to 25
   await page.locator('input#length-number').fill('25');
   
-  // Click the share button
+  // Click the share button (uses aria-label)
   await page.locator('button[aria-label="Copy shareable URL"]').click();
   
   // Skip checking the button state (which is unreliable) and proceed with URL verification
@@ -198,9 +200,10 @@ test('should generate correct shareable URLs for various settings', async ({ pag
   // Wait a moment for state to reset
   await page.waitForTimeout(1000);
   
-  // Test 2: Add excluded characters by checking options
-  await page.locator('input#exclude-uppercase').check();
-  await page.locator('input#exclude-symbols').check();
+  // Test 2: The checkboxes are "include" checkboxes - UNCHECK them to exclude
+  // When unchecked, they exclude that character type
+  await page.locator('input#exclude-uppercase').uncheck();
+  await page.locator('input#exclude-symbols').uncheck();
   
   // Click the share button again
   await page.locator('button[aria-label="Copy shareable URL"]').click();
@@ -232,20 +235,22 @@ test('should correctly apply settings from URL parameters', async ({ page }) => 
   await page.waitForSelector('div.font-mono');
   
   // Verify the settings were applied correctly
+  // The checkboxes are "include" checkboxes - when excluding, they should be UNCHECKED
   expect(await page.locator('input#length-number').inputValue()).toBe('22');
-  expect(await page.locator('input#exclude-lowercase').isChecked()).toBe(true);
+  expect(await page.locator('input#exclude-lowercase').isChecked()).toBe(false);
   expect(await page.locator('input#no-leading-special').isChecked()).toBe(true);
   
   // Verify excluded characters
   await page.click('button:has-text("Exclude Specific Characters")');
   await page.waitForSelector('#keyboard-excluder-panel');
   
-  const excludedDisplay = await page.locator('.font-mono.text-red-700');
+  // Check if the excluded characters are displayed (inside the keyboard excluder panel, uses truncate class)
+  const excludedDisplay = await page.locator('#keyboard-excluder-panel .font-mono.truncate');
   const excludedText = await excludedDisplay.textContent();
   expect(excludedText.trim()).toBe('xyz');
   
   // Verify password follows the rules
-  const passwordText = await page.locator('div.font-mono').textContent().then(text => text.trim());
+  const passwordText = await page.locator('div.font-mono').first().textContent().then(text => text.trim());
   
   // Should be 22 characters long
   expect(passwordText.length).toBe(22);

@@ -14,9 +14,10 @@ test('Network monitoring shows network activity when pinging Google', async ({ p
   let initialLogCount = 0;
   try {
     // If log exists and has entries, count them
-    const logExists = await page.locator('.max-h-64.overflow-y-auto').isVisible();
+    // Log entries are direct children divs with p-3 class inside the scrollable container
+    const logExists = await page.locator('.max-h-48.overflow-y-auto').isVisible();
     if (logExists) {
-      const entries = await page.locator('.max-h-64.overflow-y-auto div[class*="border-b"]').count();
+      const entries = await page.locator('.max-h-48.overflow-y-auto > div.p-3').count();
       initialLogCount = entries;
     }
   } catch (e) {
@@ -28,22 +29,25 @@ test('Network monitoring shows network activity when pinging Google', async ({ p
   await page.click('button:has-text("Ping Google")');
 
   // Wait for test to complete - either success or error message should appear
+  // The success span contains "ms" text, error span contains "Failed"
+  // Both have aria-live="polite" attribute
   await Promise.race([
-    page.waitForSelector('div.text-green-700', { timeout: 10000 }),
-    page.waitForSelector('div.text-red-700', { timeout: 10000 })
+    page.waitForSelector('span.text-emerald-400:has-text("ms")', { timeout: 10000 }),
+    page.waitForSelector('span.text-rose-400:has-text("Failed")', { timeout: 10000 })
   ]);
 
   // Wait a moment for log entries to populate
   await page.waitForTimeout(1000);
 
   // Verify the network log exists and contains entries now
-  await page.waitForSelector('.max-h-64.overflow-y-auto', { state: 'visible', timeout: 5000 });
+  // Log entries are direct children divs with p-3 class inside the scrollable container
+  await page.waitForSelector('.max-h-48.overflow-y-auto', { state: 'visible', timeout: 5000 });
   
   // Check that new entries have been added to the log
-  const currentEntries = await page.locator('.max-h-64.overflow-y-auto div[class*="border-b"]').count();
+  const currentEntries = await page.locator('.max-h-48.overflow-y-auto > div.p-3').count();
   expect(currentEntries).toBeGreaterThan(initialLogCount);
   
   // Verify the log contains references to the Google ping
-  const logContent = await page.locator('.max-h-64.overflow-y-auto').textContent();
+  const logContent = await page.locator('.max-h-48.overflow-y-auto').textContent();
   expect(logContent).toContain('google.com');
 }); 

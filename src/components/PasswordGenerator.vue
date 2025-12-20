@@ -374,6 +374,7 @@ onMounted(() => {
               <!-- Copy URL button -->
               <button 
                 @click="copyShareableUrl"
+                aria-label="Copy shareable URL"
                 class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 focus-ring min-w-[200px]"
                 :class="shareUrlStatus === 'success' 
                   ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' 

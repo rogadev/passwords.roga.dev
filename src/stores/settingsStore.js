@@ -1,8 +1,9 @@
 import { reactive } from 'vue';
 
 // Shared reactive settings store - single source of truth for both components
+// Default length matches URL params default (20) for consistency
 const settings = reactive({
-  length: 16,
+  length: 20,
   excludeLowercase: false,
   excludeNumbers: false,
   excludeUppercase: false,

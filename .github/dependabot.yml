@@ -1,0 +1,45 @@
+version: 2
+updates:
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    open-pull-requests-limit: 5
+    groups:
+      # Group all production dependencies together
+      production:
+        dependency-type: 'production'
+        update-types:
+          - 'minor'
+          - 'patch'
+      # Group all dev dependencies together
+      development:
+        dependency-type: 'development'
+        update-types:
+          - 'minor'
+          - 'patch'
+      # Group testing tools
+      testing:
+        patterns:
+          - '@playwright/*'
+          - 'vitest'
+          - '@vue/test-utils'
+          - 'happy-dom'
+          - 'jsdom'
+      # Group build tools
+      build:
+        patterns:
+          - 'vite'
+          - '@vitejs/*'
+          - 'postcss'
+          - 'autoprefixer'
+      # Group Tailwind
+      tailwind:
+        patterns:
+          - 'tailwindcss'
+          - '@tailwindcss/*'
+    commit-message:
+      prefix: 'chore(deps)'
+    labels:
+      - 'dependencies'

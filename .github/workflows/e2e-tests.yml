@@ -12,25 +12,30 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: 'pnpm'
           
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install
         
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+        run: pnpm exec playwright install --with-deps
         
       - name: Run unit tests
-        run: npm test
+        run: pnpm test
         
       - name: Build app
-        run: npm run build
+        run: pnpm build
         
       - name: Start server and run E2E tests
         run: |
@@ -39,14 +44,14 @@ jobs:
           echo "Using port: $PORT"
           
           # Start server with dynamic port
-          npx vite preview --port $PORT &
+          pnpm preview --port $PORT &
           SERVER_PID=$!
           
           # Wait for server to start
           sleep 5
           
           # Run tests with the dynamic port
-          PLAYWRIGHT_TEST_BASE_URL=http://localhost:$PORT npx playwright test
+          PLAYWRIGHT_TEST_BASE_URL=http://localhost:$PORT pnpm test:e2e
           
           # Kill the server process afterward
           kill $SERVER_PID || true
@@ -57,4 +62,4 @@ jobs:
         with:
           name: playwright-report
           path: playwright-report/
-          retention-days: 7 
+          retention-days: 7

@@ -48,11 +48,20 @@ npm run preview
 This project uses Vitest for unit testing and Playwright for end-to-end testing.
 
 ```bash
-# Run unit tests
+# Run unit tests (jsdom environment)
 npm test
 
 # Run unit tests in watch mode
 npm run test:watch
+
+# Run browser mode tests (real browser with Playwright)
+npm run test:browser
+
+# Run browser tests in watch mode
+npm run test:browser:watch
+
+# Run all tests (unit + browser)
+npm run test:all
 
 # Run end-to-end tests
 npm run test:e2e

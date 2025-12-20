@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 // Default settings should be applied when no parameters are present
 test('default settings should be applied when no parameters are present', async ({ page }) => {
   // Navigate to the home page without parameters
-  await page.goto('http://localhost:5173/');
+  await page.goto('/');
 
   // Wait for the password to be generated
   await page.waitForSelector('div.font-mono');
@@ -27,7 +27,7 @@ test('default settings should be applied when no parameters are present', async 
 // Should apply length parameter
 test('should apply length parameter', async ({ page }) => {
   // Navigate with length parameter
-  await page.goto('http://localhost:5173/?len=24');
+  await page.goto('/?len=24');
 
   // Wait for the password to be generated
   await page.waitForSelector('div.font-mono');
@@ -45,7 +45,7 @@ test('should apply length parameter', async ({ page }) => {
 // Should apply excluded character types
 test('should apply excluded character types', async ({ page }) => {
   // Navigate with excluded character types
-  await page.goto('http://localhost:5173/?exLower&exNum');
+  await page.goto('/?exLower&exNum');
 
   // Wait for the password to be generated
   await page.waitForSelector('div.font-mono');
@@ -70,7 +70,7 @@ test('should apply excluded character types', async ({ page }) => {
 // Should apply excluded specific characters
 test('should apply excluded specific characters', async ({ page }) => {
   // Navigate with excluded characters
-  await page.goto('http://localhost:5173/?exc=abc123');
+  await page.goto('/?exc=abc123');
 
   // Wait for the password to be generated
   await page.waitForSelector('div.font-mono');
@@ -97,7 +97,7 @@ test('should apply excluded specific characters', async ({ page }) => {
 // Should apply rule for no leading special characters
 test('should apply rule for no leading special characters', async ({ page }) => {
   // Navigate with rule parameter
-  await page.goto('http://localhost:5173/?ruleNoLead&len=15');
+  await page.goto('/?ruleNoLead&len=15');
 
   // Wait for the password to be generated
   await page.waitForSelector('div.font-mono');
@@ -118,7 +118,7 @@ test('should apply rule for no leading special characters', async ({ page }) => 
 // Should apply all parameters together
 test('should apply all parameters together', async ({ page }) => {
   // Navigate with combined parameters
-  await page.goto('http://localhost:5173/?len=18&exUpper&exSym&ruleNoLead&exc=xyz789');
+  await page.goto('/?len=18&exUpper&exSym&ruleNoLead&exc=xyz789');
 
   // Wait for the password to be generated
   await page.waitForSelector('div.font-mono');
@@ -172,7 +172,7 @@ test('should apply all parameters together', async ({ page }) => {
 // Test that settings create expected URLs 
 test('should generate correct shareable URLs for various settings', async ({ page }) => {
   // Navigate to home page
-  await page.goto('http://localhost:5173/');
+  await page.goto('/');
   await page.waitForSelector('div.font-mono');
   
   // Test 1: Set length to 25
@@ -225,7 +225,7 @@ test('should generate correct shareable URLs for various settings', async ({ pag
 // Test for URL parameter functionality
 test('should correctly apply settings from URL parameters', async ({ page }) => {
   // Generate a URL with specific settings
-  const testUrl = 'http://localhost:5173/?len=22&exLower=&ruleNoLead=&exc=xyz';
+  const testUrl = '/?len=22&exLower=&ruleNoLead=&exc=xyz';
   
   // Navigate directly to the URL with parameters
   await page.goto(testUrl);
@@ -264,7 +264,7 @@ test('should correctly apply settings from URL parameters', async ({ page }) => 
 // Test for clicking password to copy
 test('should show copy confirmation when clicking on the password area', async ({ page }) => {
   // Start with a clean page
-  await page.goto('http://localhost:5173/');
+  await page.goto('/');
   await page.waitForSelector('div.font-mono');
   
   // Click on the password to copy it

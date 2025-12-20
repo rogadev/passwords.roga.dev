@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('Network monitoring shows network activity when pinging Google', async ({ page }) => {
   // Navigate to the home page
-  await page.goto('http://localhost:5173/');
+  await page.goto('/');
 
   // Open the Network Activity Monitor panel
   await page.click('button:has-text("Network Activity Monitor")');

@@ -19,22 +19,22 @@
     "vue": "^3.5.26"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0",
-    "@tailwindcss/postcss": "^4.1.18",
+    "@playwright/test": "^1.58.2",
+    "@tailwindcss/postcss": "^4.2.1",
     "@testing-library/vue": "^8.1.0",
     "@vite-pwa/assets-generator": "^1.0.2",
-    "@vitejs/plugin-vue": "^6.0.3",
-    "@vitest/browser-playwright": "^4.0.17",
+    "@vitejs/plugin-vue": "^6.0.4",
+    "@vitest/browser-playwright": "^4.0.18",
     "@vue/test-utils": "^2.4.6",
-    "autoprefixer": "^10.4.23",
-    "happy-dom": "^20.1.0",
+    "autoprefixer": "^10.4.27",
+    "happy-dom": "^20.8.3",
     "jsdom": "^27.4.0",
-    "playwright": "^1.57.0",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.18",
+    "playwright": "^1.58.2",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.1",
     "vite": "^7.3.1",
     "vite-plugin-pwa": "^1.2.0",
-    "vitest": "^4.0.17"
+    "vitest": "^4.0.18"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, watch, onUnmounted, computed } from 'vue';
 
 // --- State ---
 const showMonitor = ref(false);
@@ -10,6 +10,7 @@ const originalFetch = ref(null);
 let originalXHROpen = null;
 let originalXHRSend = null;
 let requestCounter = 0;
+let intercepting = false;
 
 const logCount = computed(() => requestLog.value.length);
 
@@ -68,7 +69,14 @@ async function runNetworkTest() {
 }
 
 // --- Request Interception --- //
+function ensureIntercepting() {
+  if (!intercepting) {
+    startIntercepting();
+  }
+}
+
 function startIntercepting() {
+  intercepting = true;
   if (window.fetch && !originalFetch.value) {
     originalFetch.value = window.fetch;
     window.fetch = async (...args) => {
@@ -115,6 +123,7 @@ function startIntercepting() {
 }
 
 function stopIntercepting() {
+  intercepting = false;
   if (originalFetch.value) {
     window.fetch = originalFetch.value;
     originalFetch.value = null;
@@ -133,8 +142,9 @@ function clearLog() {
   requestLog.value = [];
 }
 
-onMounted(() => {
-  startIntercepting();
+// Lazy-init: only start intercepting when the user opens the panel
+watch(showMonitor, (open) => {
+  if (open) ensureIntercepting();
 });
 
 onUnmounted(() => {

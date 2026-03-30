@@ -124,30 +124,26 @@ async function copyShareableUrl() {
   }
 }
 
+const bookmarkHint = ref('');
+
 function bookmarkPage() {
-  const shareableUrl = getShareableUrl();
-  const title = 'Password Generator | My Settings';
-  
-  // Most browsers don't allow programmatic bookmarking for security reasons
-  // Show a helpful message instead
-  if (window.sidebar && window.sidebar.addPanel) {
-    // Firefox <23
-    window.sidebar.addPanel(title, shareableUrl, '');
-  } else if (window.external && window.external.AddFavorite) {
-    // IE
-    window.external.AddFavorite(shareableUrl, title);
-  } else {
-    // Modern browsers - show keyboard shortcut hint
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const shortcut = isMac ? '⌘+D' : 'Ctrl+D';
-    alert(`Press ${shortcut} to bookmark this page with your current settings.\n\nThe URL has been updated to include your preferences.`);
-  }
+  // Update URL first so the bookmark captures current settings
+  updateURLParams(settings);
+  const isMac = navigator.userAgentData?.platform === 'macOS' || /Mac/.test(navigator.userAgent);
+  const shortcut = isMac ? '\u2318+D' : 'Ctrl+D';
+  bookmarkHint.value = `Press ${shortcut} to bookmark`;
+  setTimeout(() => { bookmarkHint.value = ''; }, 3000);
 }
 
 // --- Lifecycle ---
 onMounted(() => {
   loadSettingsFromURL();
-  generateNewPassword();
+  // The deep watcher on settings fires from loadSettingsFromURL() and calls
+  // generateNewPassword(), but only if settings actually changed (URL had params).
+  // Generate explicitly to cover the default-settings case where the watcher won't fire.
+  if (!generatedPassword.value) {
+    generateNewPassword();
+  }
 });
 </script>
 
@@ -392,15 +388,22 @@ onMounted(() => {
               </button>
 
               <!-- Bookmark button -->
-              <button 
-                @click="bookmarkPage"
-                class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:border-zinc-600 hover:text-zinc-100 transition-all duration-200 focus-ring"
-              >
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
-                </svg>
-                Bookmark Settings
-              </button>
+              <div class="relative">
+                <button
+                  @click="bookmarkPage"
+                  class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:border-zinc-600 hover:text-zinc-100 transition-all duration-200 focus-ring"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                  </svg>
+                  Bookmark Settings
+                </button>
+                <Transition name="fade">
+                  <span v-if="bookmarkHint" class="absolute -bottom-7 left-0 text-xs text-zinc-400 whitespace-nowrap">
+                    {{ bookmarkHint }}
+                  </span>
+                </Transition>
+              </div>
             </div>
             <p v-if="shareUrlStatus === 'error'" class="text-xs text-rose-400 mt-2" aria-live="assertive">
               Failed to copy URL to clipboard

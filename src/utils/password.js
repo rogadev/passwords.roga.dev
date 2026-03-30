@@ -7,16 +7,23 @@ const CHAR_SETS = {
 
 /**
  * Generates a cryptographically secure random integer between min (inclusive) and max (exclusive).
+ * Uses rejection sampling to eliminate modulo bias.
  * @param {number} min - The minimum value (inclusive).
  * @param {number} max - The maximum value (exclusive).
  * @returns {number} A random integer.
  */
 function getRandomInt(min, max) {
   const range = max - min;
+  if (range <= 0) return min;
+  // Find the largest multiple of range that fits in 2^32 to reject values above it
+  const limit = Math.floor(0x100000000 / range) * range;
   const randomBuffer = new Uint32Array(1);
-  crypto.getRandomValues(randomBuffer);
-  const randomNumber = randomBuffer[0] / (0xFFFFFFFF + 1); // Convert to a float in [0, 1)
-  return Math.floor(randomNumber * range + min);
+  let value;
+  do {
+    crypto.getRandomValues(randomBuffer);
+    value = randomBuffer[0];
+  } while (value >= limit);
+  return (value % range) + min;
 }
 
 /**
@@ -110,8 +117,10 @@ export function generatePassword(options) {
   if (ruleNoLeadingSpecial) {
     const leadingCharIsSpecial = (numbersPool + symbolsPool).includes(password[0]);
     if (leadingCharIsSpecial) {
-      // Find the first allowed character (must be lower or upper) to swap with
-      const allowedLeadingPool = lowercasePool + uppercasePool;
+      // Only consider letter pools that are actually included in the password
+      const allowedLeadingPool =
+        (!excludeLowercase ? lowercasePool : '') +
+        (!excludeUppercase ? uppercasePool : '');
       if (!allowedLeadingPool) {
         return "Error: Cannot satisfy 'no leading special' rule with selected characters.";
       }

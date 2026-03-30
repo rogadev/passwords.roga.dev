@@ -1,6 +1,26 @@
 @import "tailwindcss";
 
 /* ============================================
+   SELF-HOSTED FONTS
+   ============================================ */
+
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/geist-latin-wght-normal.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2');
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ============================================
    DESIGN SYSTEM: Dark shadcn 2.0 Inspired
    ============================================ */
 

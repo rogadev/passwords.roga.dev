@@ -17,6 +17,7 @@ pnpm test:browser     # Browser tests (Playwright-backed vitest)
 pnpm test:all         # Unit + browser tests
 pnpm test:e2e         # Playwright end-to-end tests
 pnpm test:e2e:ui      # Playwright E2E with interactive UI
+pnpm ready            # Full pre-PR gate: unit + browser + E2E tests, then build
 ```
 
 Run a single test file: `pnpm vitest run tests/unit/urlParams.test.js`
@@ -35,9 +36,9 @@ Run a single test file: `pnpm vitest run tests/unit/urlParams.test.js`
 Three test tiers with separate configs:
 - **Unit tests** (`tests/unit/`): `vitest.config.js`, jsdom environment
 - **Browser tests** (`tests/browser/`): `vitest.browser.config.js`, real Chromium via Playwright
-- **E2E tests** (`tests/e2e/`): `playwright.config.js`, runs against dev server (auto-started locally, provided externally in CI)
+- **E2E tests** (`tests/e2e/`): `playwright.config.js`, runs against dev server (auto-started locally)
 
-CI runs Chromium only. Locally, E2E runs Chromium + Firefox + WebKit.
+CI runs unit tests only. Browser and E2E tests are run locally by policy (to save CI compute) — run `pnpm ready` before opening a PR. Locally, E2E runs Chromium + Firefox + WebKit.
 
 ## Styling
 

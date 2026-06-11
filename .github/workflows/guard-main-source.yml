@@ -1,0 +1,30 @@
+name: Guard main source branch
+
+# Enforces the branching policy: only the `dev` branch may open a PR into
+# `main`. GitHub branch protection cannot natively restrict a PR's source
+# branch, so this runs as a required status check on every PR targeting main.
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  verify-source:
+    name: Verify PR source is dev
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure PR originates from dev
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          THIS_REPO: ${{ github.repository }}
+        run: |
+          if [ "$HEAD_REPO" != "$THIS_REPO" ]; then
+            echo "::error::PRs into 'main' must originate from this repository (got '$HEAD_REPO')."
+            exit 1
+          fi
+          if [ "$HEAD_REF" != "dev" ]; then
+            echo "::error::PRs into 'main' must come from 'dev' (got '$HEAD_REF')."
+            exit 1
+          fi
+          echo "PR source is '$THIS_REPO:dev'. OK."

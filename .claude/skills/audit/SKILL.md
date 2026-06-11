@@ -13,16 +13,16 @@ You are a **dependency maintenance engineer**. This is a recurring chore (typica
 ## This repo's specifics
 
 - **Package manager: pnpm 10.x** (pinned via `packageManager`). On pnpm 10, `pnpm audit --fix` resolves advisories by writing pins into the `pnpm.overrides` block of `package.json` — this repo already carries a substantial hardening `overrides` block (lodash, minimatch, rollup, serialize-javascript, ajv, picomatch, …). (If pnpm is ever bumped to 11+, bare `--fix` errors with `ERR_PNPM_INVALID_FIX_OPTION` — use `--fix=update` first, then `--fix=override`.)
-- **No lint/format/typecheck scripts.** There is no `pnpm fix` / `pnpm ready` gate. The proof a dep bump didn't break anything is the **test suite + production build** (`pnpm test:all` + `pnpm build`).
+- **The local gate is `pnpm ready`** (see the `ready` skill) — its composition in `package.json` is the source of truth. For a dep bump, at minimum run `pnpm test:all` + `pnpm build`; running full `pnpm ready` is better proof.
 - **Real test suite exists:** `pnpm test` (unit, jsdom), `pnpm test:browser` (Chromium via Playwright), `pnpm test:all` (both), `pnpm test:e2e` (Playwright E2E). Always run at least `pnpm test:all` + `pnpm build`.
-- **Work lands on `dev`**, commits go directly there (no feature branch). A `dev → main` PR ships *everything* on `dev`, not just the dep patch.
+- **Work lands on `dev`**, commits go directly there (no feature branch). A `dev → main` PR ships _everything_ on `dev`, not just the dep patch.
 - If `pnpm install` aborts with `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`, prefix with `CI=true`.
 
 ## Ground rules
 
 - **No changes → no commit, no PR.** If `pnpm audit` is already clean or `--fix` changes nothing, STOP and report. Never create empty commits or PRs.
 - **Security patches are a `chore(deps)` — no version bump.** Don't touch `package.json` `version`.
-- **Stage only the dependency files.** Never `git add -A` / `git add .` — a stray file must never ride along in a deps commit. (This repo has no formatter that rewrites other files, so the dep commit should contain *only* `package.json` + `pnpm-lock.yaml`.)
+- **Stage only the dependency files.** Never `git add -A` / `git add .` — a stray file must never ride along in a deps commit. (This repo has no formatter that rewrites other files, so the dep commit should contain _only_ `package.json` + `pnpm-lock.yaml`.)
 - **Before opening a dev → main PR**, check `git log --oneline origin/main..dev`. If `dev` has unfinished feature work, do NOT open the PR — commit + push the patch and report, leaving the release PR to whoever owns it.
 
 ## Step 1: Preconditions
@@ -60,9 +60,9 @@ pnpm audit                  # what's vulnerable right now?
 pnpm audit --fix            # writes pnpm.overrides pins into package.json
 ```
 
-> ⚠️ **CRITICAL — `--fix` REWRITES the whole overrides block, it does not just append.** It prints a reassuring summary like `2 overrides were added to package.json`, but it actually regenerates the managed `overrides` from the *current* advisory feed and **silently drops manually-curated hardening overrides whose advisories have aged out, and weakens others to looser version bounds.** The summary line is a lie of omission — do NOT trust it. This repo's overrides block is load-bearing; losing entries silently re-opens patched vulnerabilities.
+> ⚠️ **CRITICAL — `--fix` REWRITES the whole overrides block, it does not just append.** It prints a reassuring summary like `2 overrides were added to package.json`, but it actually regenerates the managed `overrides` from the _current_ advisory feed and **silently drops manually-curated hardening overrides whose advisories have aged out, and weakens others to looser version bounds.** The summary line is a lie of omission — do NOT trust it. This repo's overrides block is load-bearing; losing entries silently re-opens patched vulnerabilities.
 >
-> **MANDATORY after `pnpm audit --fix`:** run `git diff package.json` and read the FULL overrides diff. Every `-` line is a guard that was removed. If anything other than pure additions appears (removed entries, or a pin moving to a *lower/weaker* version), the regenerated block is a regression. Restore the previous block (`git checkout HEAD -- package.json` to start over, or hand-merge) so the result is **old overrides + new advisory fixes**, never *replacement*.
+> **MANDATORY after `pnpm audit --fix`:** run `git diff package.json` and read the FULL overrides diff. Every `-` line is a guard that was removed. If anything other than pure additions appears (removed entries, or a pin moving to a _lower/weaker_ version), the regenerated block is a regression. Restore the previous block (`git checkout HEAD -- package.json` to start over, or hand-merge) so the result is **old overrides + new advisory fixes**, never _replacement_.
 
 ```bash
 git diff package.json        # READ the full overrides diff — additive only?
@@ -133,16 +133,16 @@ Only if `dev` is shippable (see Ground rules). Use the **create-pr** skill. PR b
 
 ## Quick reference
 
-| Situation                                  | Action                                                        |
-| ------------------------------------------ | ------------------------------------------------------------- |
-| `pnpm audit` already clean                 | STOP — "nothing to patch", no commit/PR                       |
-| `--fix` + install changed nothing          | STOP — report, no commit/PR                                   |
-| `--fix` diff REMOVES/weakens an override   | Regression — restore old block, keep old overrides + new fix  |
-| Working tree dirty at start                | STOP — ask user to stash/commit first                         |
-| Not on `dev`                               | Confirm with user before proceeding                           |
-| `pnpm test:all` / `pnpm build` fails       | STOP — report, let user decide                                |
-| `dev` has unfinished feature work          | Commit + push patch, SKIP the dev→main PR, report             |
-| Advisory has no patched version            | Note it in the summary; don't block                           |
-| Existing override looks stale              | Note it for the user; don't auto-prune                        |
-| Staging                                    | `git add package.json pnpm-lock.yaml` only — never `-A` / `.` |
-| Version bump                               | Never — security patches are `chore(deps)`, no bump           |
+| Situation                                | Action                                                        |
+| ---------------------------------------- | ------------------------------------------------------------- |
+| `pnpm audit` already clean               | STOP — "nothing to patch", no commit/PR                       |
+| `--fix` + install changed nothing        | STOP — report, no commit/PR                                   |
+| `--fix` diff REMOVES/weakens an override | Regression — restore old block, keep old overrides + new fix  |
+| Working tree dirty at start              | STOP — ask user to stash/commit first                         |
+| Not on `dev`                             | Confirm with user before proceeding                           |
+| `pnpm test:all` / `pnpm build` fails     | STOP — report, let user decide                                |
+| `dev` has unfinished feature work        | Commit + push patch, SKIP the dev→main PR, report             |
+| Advisory has no patched version          | Note it in the summary; don't block                           |
+| Existing override looks stale            | Note it for the user; don't auto-prune                        |
+| Staging                                  | `git add package.json pnpm-lock.yaml` only — never `-A` / `.` |
+| Version bump                             | Never — security patches are `chore(deps)`, no bump           |

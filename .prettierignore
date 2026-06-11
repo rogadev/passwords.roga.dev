@@ -1,0 +1,8 @@
+dist
+dev-dist
+coverage
+node_modules
+.claude
+pnpm-lock.yaml
+tests/browser/__screenshots__
+*.min.*

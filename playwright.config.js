@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test'
 
 /**
  * @see https://playwright.dev/docs/test-configuration
@@ -15,7 +15,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:5173',
     trace: 'on-first-retry',
-    screenshot: 'only-on-failure'
+    screenshot: 'only-on-failure',
   },
   projects: process.env.CI
     ? [
@@ -47,4 +47,4 @@ export default defineConfig({
         reuseExistingServer: true,
         timeout: 120 * 1000,
       },
-});
+})

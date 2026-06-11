@@ -1,53 +1,39 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
 
-test('Network monitoring shows network activity when pinging Google', async ({ page }) => {
+test('Network monitoring shows network activity when pinging Google', async ({
+  page,
+}) => {
   // Navigate to the home page
-  await page.goto('/');
+  await page.goto('/')
 
   // Open the Network Activity Monitor panel
-  await page.click('button:has-text("Network Activity Monitor")');
+  await page.locator('button', { hasText: 'Network Activity Monitor' }).click()
 
-  // Wait for the panel to be visible
-  await page.waitForSelector('#network-monitor-panel', { state: 'visible' });
+  // The panel should become visible
+  await expect(page.locator('#network-monitor-panel')).toBeVisible()
 
-  // Count network log entries before the ping
-  let initialLogCount = 0;
-  try {
-    // If log exists and has entries, count them
-    // Log entries are direct children divs with p-3 class inside the scrollable container
-    const logExists = await page.locator('.max-h-48.overflow-y-auto').isVisible();
-    if (logExists) {
-      const entries = await page.locator('.max-h-48.overflow-y-auto > div.p-3').count();
-      initialLogCount = entries;
-    }
-  } catch (e) {
-    // Log might not exist yet if there are no entries, that's fine
-    initialLogCount = 0;
-  }
+  // Count network log entries before the ping. `.count()` resolves to 0 when
+  // the log is empty, so no visibility guard or try/catch is needed.
+  const logEntries = page.locator('.max-h-48.overflow-y-auto > div.p-3')
+  const initialLogCount = await logEntries.count()
 
   // Click the "Ping Google" button
-  await page.click('button:has-text("Ping Google")');
+  await page.locator('button', { hasText: 'Ping Google' }).click()
 
-  // Wait for test to complete - either success or error message should appear
-  // The success span contains "ms" text, error span contains "Failed"
-  // Both have aria-live="polite" attribute
-  await Promise.race([
-    page.waitForSelector('span.text-emerald-400:has-text("ms")', { timeout: 10000 }),
-    page.waitForSelector('span.text-rose-400:has-text("Failed")', { timeout: 10000 })
-  ]);
+  // Wait for the request to resolve: either the success span (contains "ms")
+  // or the error span (contains "Failed") becomes visible.
+  const success = page.locator('span.text-emerald-400', { hasText: 'ms' })
+  const failure = page.locator('span.text-rose-400', { hasText: 'Failed' })
+  await expect(success.or(failure).first()).toBeVisible({ timeout: 10000 })
 
-  // Wait a moment for log entries to populate
-  await page.waitForTimeout(1000);
+  // The log container should be visible and have gained entries.
+  await expect(page.locator('.max-h-48.overflow-y-auto')).toBeVisible()
+  await expect
+    .poll(() => logEntries.count(), { timeout: 5000 })
+    .toBeGreaterThan(initialLogCount)
 
-  // Verify the network log exists and contains entries now
-  // Log entries are direct children divs with p-3 class inside the scrollable container
-  await page.waitForSelector('.max-h-48.overflow-y-auto', { state: 'visible', timeout: 5000 });
-  
-  // Check that new entries have been added to the log
-  const currentEntries = await page.locator('.max-h-48.overflow-y-auto > div.p-3').count();
-  expect(currentEntries).toBeGreaterThan(initialLogCount);
-  
-  // Verify the log contains references to the Google ping
-  const logContent = await page.locator('.max-h-48.overflow-y-auto').textContent();
-  expect(logContent).toContain('google.com');
-}); 
+  // The log should reference the Google ping.
+  await expect(page.locator('.max-h-48.overflow-y-auto')).toContainText(
+    'google.com',
+  )
+})

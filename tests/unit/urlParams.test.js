@@ -75,6 +75,14 @@ describe('urlParams', () => {
     expect(settings.excludedChars).toBe('@#$');
   });
 
+  it('should handle a literal % in excluded characters', () => {
+    // URLSearchParams decodes %25 -> '%'; no manual double-decode
+    window.location = new URL('http://localhost:8080/?exc=%25a');
+
+    const settings = getParamsFromURL();
+    expect(settings.excludedChars).toBe('%a');
+  });
+
   it('should parse rules correctly', () => {
     // Setup mock URL with rule
     window.location = new URL('http://localhost:8080/?ruleNoLead');

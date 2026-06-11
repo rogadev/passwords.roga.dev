@@ -171,58 +171,28 @@ test('should apply all parameters together', async ({ page }) => {
 
 // Tests for shareable URL feature
 
-// Test that settings create expected URLs 
-test('should generate correct shareable URLs for various settings', async ({ page }) => {
-  // Navigate to home page
+// Settings changes should sync to the address bar (the same query string the
+// "Copy Shareable URL" button copies). The sync is debounced 200ms, so use
+// auto-retrying toHaveURL assertions rather than fixed waits.
+test('should sync settings to the URL as they change', async ({ page }) => {
   await page.goto('/');
   await page.waitForSelector('div.font-mono');
-  
-  // Test 1: Set length to 25
+
+  // Change the length and expect it to appear in the URL
   await page.locator('input#length-number').fill('25');
-  
-  // Click the share button (uses aria-label)
-  await page.locator('button[aria-label="Copy shareable URL"]').click();
-  
-  // Skip checking the button state (which is unreliable) and proceed with URL verification
-  // Just wait a moment for the operation to complete
-  await page.waitForTimeout(500);
-  
-  // Using JavaScript to extract the URL that would have been copied
-  const lengthUrl = await page.evaluate(() => {
-    // This creates a new URL with the same parameters that would've been copied
-    const url = new URL(window.location.href);
-    url.searchParams.set('len', '25');
-    return url.href;
-  });
-  
-  expect(lengthUrl).toContain('len=25');
-  
-  // Wait a moment for state to reset
-  await page.waitForTimeout(1000);
-  
-  // Test 2: The checkboxes are "include" checkboxes - UNCHECK them to exclude
-  // When unchecked, they exclude that character type
+  await expect(page).toHaveURL(/len=25/);
+
+  // The checkboxes are "include" checkboxes - UNCHECK them to exclude
   await page.locator('input#exclude-uppercase').uncheck();
   await page.locator('input#exclude-symbols').uncheck();
-  
-  // Click the share button again
-  await page.locator('button[aria-label="Copy shareable URL"]').click();
-  
-  // Again, skip checking button state and just wait
-  await page.waitForTimeout(500);
-  
-  // Verify URL would have the correct parameters
-  const optionsUrl = await page.evaluate(() => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('len', '25');
-    url.searchParams.set('exUpper', '');
-    url.searchParams.set('exSym', '');
-    return url.href;
-  });
-  
-  expect(optionsUrl).toContain('len=25');
-  expect(optionsUrl).toContain('exUpper=');
-  expect(optionsUrl).toContain('exSym=');
+
+  await expect(page).toHaveURL(/exUpper=/);
+  await expect(page).toHaveURL(/exSym=/);
+  await expect(page).toHaveURL(/len=25/);
+
+  // Re-including a type removes its param from the URL
+  await page.locator('input#exclude-uppercase').check();
+  await expect(page).not.toHaveURL(/exUpper=/);
 });
 
 // Test for URL parameter functionality

@@ -105,7 +105,7 @@ test('generates new password when refresh button is clicked', async () => {
   const initialPassword = passwordElement.textContent;
   
   // Find the refresh button (SVG with refresh icon)
-  const refreshButton = container.querySelector('[aria-label="Generate new password (or press Enter)"]');
+  const refreshButton = container.querySelector('[aria-label="Generate new password"]');
   expect(refreshButton).toBeTruthy();
   
   await userEvent.click(refreshButton);
@@ -172,7 +172,7 @@ test('applies "no leading special characters" rule', async () => {
     expect(firstChar).toMatch(/[a-zA-Z]/);
     
     // Generate new password
-    const refreshButton = container.querySelector('[aria-label="Generate new password (or press Enter)"]');
+    const refreshButton = container.querySelector('[aria-label="Generate new password"]');
     await userEvent.click(refreshButton);
   }
   

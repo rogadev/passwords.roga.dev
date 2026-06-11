@@ -1,4 +1,4 @@
-const CHAR_SETS = {
+export const CHAR_SETS = {
   LOWERCASE: 'abcdefghijklmnopqrstuvwxyz',
   UPPERCASE: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
   NUMBERS: '0123456789',
@@ -124,22 +124,14 @@ export function generatePassword(options) {
       if (!allowedLeadingPool) {
         return "Error: Cannot satisfy 'no leading special' rule with selected characters.";
       }
-      let swapIndex = -1;
+      // A non-empty allowedLeadingPool means a letter set was enabled, so
+      // requiredChars guaranteed at least one letter somewhere past index 0
+      // (index 0 is special here). The search below therefore always succeeds.
       for (let i = 1; i < password.length; i++) {
           if (allowedLeadingPool.includes(password[i])) {
-              swapIndex = i;
+              [password[0], password[i]] = [password[i], password[0]];
               break;
           }
-      }
-
-      if (swapIndex !== -1) {
-         // Swap the leading char with the first allowed char found
-         [password[0], password[swapIndex]] = [password[swapIndex], password[0]];
-      } else {
-          // If no swappable char found (e.g., password is all numbers/symbols but rule applied),
-          // replace the first char with a random allowed one.
-          // This might slightly reduce the guarantee of including all types if the swapped char was the only instance of its type.
-          password[0] = allowedLeadingPool[getRandomInt(0, allowedLeadingPool.length)];
       }
     }
   }

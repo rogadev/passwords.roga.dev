@@ -9,8 +9,17 @@ const requestLog = ref([]);
 const originalFetch = ref(null);
 let originalXHROpen = null;
 let originalXHRSend = null;
+let originalSendBeacon = null;
 let requestCounter = 0;
 let intercepting = false;
+
+function logRequest(type, method, url) {
+  requestCounter++;
+  requestLog.value.unshift({ id: requestCounter, type, method, url: String(url), timestamp: new Date() });
+  if (requestLog.value.length > 50) {
+    requestLog.value.pop();
+  }
+}
 
 const logCount = computed(() => requestLog.value.length);
 
@@ -82,12 +91,7 @@ function startIntercepting() {
     window.fetch = async (...args) => {
       const url = args[0] instanceof Request ? args[0].url : args[0];
       const method = args[0] instanceof Request ? args[0].method : (args[1]?.method || 'GET');
-      requestCounter++;
-      const logEntry = { id: requestCounter, type: 'fetch', method, url: String(url), timestamp: new Date() };
-      requestLog.value.unshift(logEntry);
-      if (requestLog.value.length > 50) {
-        requestLog.value.pop();
-      }
+      logRequest('fetch', method, url);
       return originalFetch.value.apply(window, args);
     };
   }
@@ -104,20 +108,17 @@ function startIntercepting() {
 
     window.XMLHttpRequest.prototype.send = function (...args) {
       if (this._requestMethod && this._requestURL) {
-        requestCounter++;
-        const logEntry = {
-          id: requestCounter,
-          type: 'XHR',
-          method: this._requestMethod,
-          url: String(this._requestURL),
-          timestamp: new Date()
-        };
-        requestLog.value.unshift(logEntry);
-        if (requestLog.value.length > 50) {
-          requestLog.value.pop();
-        }
+        logRequest('XHR', this._requestMethod, this._requestURL);
       }
       return originalXHRSend.apply(this, args);
+    };
+  }
+
+  if (navigator.sendBeacon && !originalSendBeacon) {
+    originalSendBeacon = navigator.sendBeacon;
+    navigator.sendBeacon = function (url, data) {
+      logRequest('beacon', 'POST', url);
+      return originalSendBeacon.call(navigator, url, data);
     };
   }
 }
@@ -135,6 +136,10 @@ function stopIntercepting() {
   if (originalXHRSend) {
     window.XMLHttpRequest.prototype.send = originalXHRSend;
     originalXHRSend = null;
+  }
+  if (originalSendBeacon) {
+    navigator.sendBeacon = originalSendBeacon;
+    originalSendBeacon = null;
   }
 }
 
@@ -314,6 +319,7 @@ onUnmounted(() => {
                   :class="{
                     'bg-blue-500/20 text-blue-400': req.type === 'fetch',
                     'bg-orange-500/20 text-orange-400': req.type === 'XHR',
+                    'bg-amber-500/20 text-amber-400': req.type === 'beacon',
                     'bg-purple-500/20 text-purple-400': req.type === 'TEST',
                     'bg-emerald-500/20 text-emerald-400': req.type === 'RESPONSE',
                     'bg-rose-500/20 text-rose-400': req.type === 'ERROR'

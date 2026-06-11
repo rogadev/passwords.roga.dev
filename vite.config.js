@@ -12,7 +12,6 @@ export default defineConfig({
         'favicon.ico',
         'icon.svg',
         'apple-touch-icon-180x180.png',
-        'images/og-image.jpg',
       ],
       manifest: {
         name: 'Password Generator',
@@ -50,8 +49,10 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Cache all assets for offline use (fonts now self-hosted)
-        globPatterns: ['**/*.{js,css,html,ico,png,jpg,svg,woff,woff2}'],
+        // Cache all assets for offline use (fonts now self-hosted).
+        // No jpg: og-image.jpg is only fetched by link scrapers and would
+        // waste offline cache space.
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
       },
     }),
   ],

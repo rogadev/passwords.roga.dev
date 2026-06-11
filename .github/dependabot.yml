@@ -2,6 +2,10 @@ version: 2
 updates:
   - package-ecosystem: 'npm'
     directory: '/'
+    # Target dev, not main: main only accepts PRs from dev (enforced by the
+    # guard-main-source workflow), so dep updates flow dev -> main like all
+    # other changes.
+    target-branch: 'dev'
     schedule:
       interval: 'weekly'
       day: 'monday'

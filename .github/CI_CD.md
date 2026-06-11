@@ -4,10 +4,12 @@ This document explains the Continuous Integration and Continuous Deployment (CI/
 
 ## CI/CD Overview
 
-We've implemented two GitHub Actions workflows for testing:
+Two GitHub Actions workflows run in CI:
 
-1. **Unit Tests**: Runs on every push and pull request
-2. **End-to-End Tests**: Runs on pull requests to the main branch
+1. **Unit Tests** (`.github/workflows/unit-tests.yml`): Runs on every push and pull request to main/dev
+2. **Guard main source branch** (`.github/workflows/guard-main-source.yml`): Required check on PRs targeting main — rejects any PR whose source is not this repository's `dev` branch
+
+Browser and E2E tests are **not** run in CI by policy — they are long-running and expensive in cloud compute, so they run locally instead (see below).
 
 Deployment is handled automatically by Vercel.
 
@@ -18,22 +20,23 @@ Deployment is handled automatically by Vercel.
 **File**: `.github/workflows/unit-tests.yml`
 
 This workflow runs on every push to main/dev branches and on all pull requests. It:
-- Sets up Node.js
+- Sets up Node.js and pnpm
 - Installs dependencies
-- Runs unit tests with Vitest
-- Uploads test results as artifacts
+- Runs unit tests with Vitest (jsdom)
 
-### End-to-End Tests Workflow
+### Guard Workflow
 
-**File**: `.github/workflows/e2e-tests.yml`
+**File**: `.github/workflows/guard-main-source.yml`
 
-This workflow runs on pull requests to the main branch. It:
-- Sets up Node.js
-- Installs dependencies and Playwright browsers
-- Runs unit tests
-- Builds the application
-- Starts a server and runs E2E tests with Playwright
-- Uploads test results as artifacts
+Enforces the branching policy: only `dev` (from this repository, not a fork) may open a PR into `main`. Runs as a required status check on every PR targeting main.
+
+### Local Pre-PR Gate
+
+Browser tests (Vitest + Playwright Chromium) and E2E tests (Playwright Chromium/Firefox/WebKit) run locally. Before opening a PR into main, run:
+
+```bash
+pnpm ready   # unit + browser + E2E tests, then a production build
+```
 
 ### Deployment
 
@@ -46,20 +49,7 @@ No additional GitHub Actions workflow is needed for deployment.
 
 ## Pull Request Flow
 
-When submitting a pull request to the main branch:
-
-1. The **Unit Tests** workflow runs immediately
-2. The **End-to-End Tests** workflow runs to verify all functionality
-3. Once merged, Vercel automatically deploys the changes
-
-## Manual Triggering
-
-The E2E Tests workflow can be triggered manually from the GitHub Actions tab if needed.
-
-## Artifacts
-
-Test results and reports are saved as artifacts for each workflow run:
-- Unit test results are available for 7 days
-- E2E test reports are available for 7 days
-
-These can be accessed from the workflow run page in the GitHub Actions tab. 
+1. Run `pnpm ready` locally and make sure it passes
+2. Open a PR from `dev` into `main`
+3. The **Unit Tests** and **Guard** workflows run as required checks
+4. Once merged, Vercel automatically deploys the changes

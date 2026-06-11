@@ -35,10 +35,14 @@ function toggleCharType(settingKey) {
   toggleSetting(settingKey);
 }
 
-// Watch settings for changes and trigger side effects
+// Watch settings for changes and trigger side effects.
+// The URL sync is debounced: dragging the length slider fires many updates
+// per second, and Safari throttles history.replaceState (~100 calls / 30s).
+let urlUpdateTimer = null;
 watch(settings, () => {
   generateNewPassword();
-  updateURLParams(settings);
+  clearTimeout(urlUpdateTimer);
+  urlUpdateTimer = setTimeout(() => updateURLParams(settings), 200);
 }, { deep: true });
 
 function generateNewPassword() {
@@ -59,8 +63,9 @@ function generateNewPassword() {
 }
 
 function loadSettingsFromURL() {
-  const urlSettings = getParamsFromURL();
-  Object.assign(settings, urlSettings);
+  // setSettings (not Object.assign) so store invariants are enforced on
+  // URL-supplied combinations like ?exLower&exUpper&ruleNoLead
+  setSettings(getParamsFromURL());
 }
 
 async function copyPassword() {
@@ -138,12 +143,10 @@ function bookmarkPage() {
 // --- Lifecycle ---
 onMounted(() => {
   loadSettingsFromURL();
-  // The deep watcher on settings fires from loadSettingsFromURL() and calls
-  // generateNewPassword(), but only if settings actually changed (URL had params).
-  // Generate explicitly to cover the default-settings case where the watcher won't fire.
-  if (!generatedPassword.value) {
-    generateNewPassword();
-  }
+  // The deep watcher is async (pre-flush), so it hasn't run yet — generate
+  // explicitly so the initial render always has a password. If the URL did
+  // change any settings, the watcher regenerates once afterwards; harmless.
+  generateNewPassword();
 });
 </script>
 
@@ -183,13 +186,13 @@ onMounted(() => {
             :class="copyStatus === 'success' ? 'animate-pulse-glow' : ''"
             role="button"
             tabindex="0"
-            @keydown.enter.prevent="generateNewPassword"
+            @keydown.enter.prevent="copyPassword"
             @keydown.space.prevent="copyPassword"
-            aria-label="Click to copy password"
+            aria-label="Copy password to clipboard"
           >
             <!-- Password text with character coloring -->
             <div 
-              class="font-mono text-lg sm:text-xl md:text-2xl text-center break-all leading-relaxed select-none"
+              class="font-mono text-lg sm:text-xl md:text-2xl text-center break-all leading-relaxed"
               aria-live="polite"
             >
               <span 
@@ -230,11 +233,10 @@ onMounted(() => {
             <!-- Action buttons (visible on hover) -->
             <div class="absolute top-1/2 right-3 sm:right-4 -translate-y-1/2 flex flex-col gap-2 opacity-0 group-hover/pw:opacity-100 transition-opacity duration-200">
               <!-- Regenerate button -->
-              <button 
+              <button
                 @click.stop="generateNewPassword"
                 class="btn-icon group/btn"
-                aria-label="Generate new password (or press Enter)"
-                title="Press Enter to regenerate"
+                aria-label="Generate new password"
               >
                 <svg class="w-5 h-5 group-hover/btn:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />

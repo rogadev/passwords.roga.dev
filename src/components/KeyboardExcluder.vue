@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
+import { CHAR_SETS } from '../utils/password';
 
 const props = defineProps({
   modelValue: {
@@ -11,11 +12,13 @@ const emit = defineEmits(['update:modelValue']);
 
 const showKeyboard = ref(false);
 
+// Derived from the generator's character sets so the keyboard can never
+// drift out of sync with what generatePassword actually uses
 const charSets = {
-  Numbers: '0123456789'.split(''),
-  Lowercase: 'abcdefghijklmnopqrstuvwxyz'.split(''),
-  Uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''),
-  Symbols: '!@#$%^&*()_+~`|}{[]:;?><,./-=\\'.split(''),
+  Numbers: CHAR_SETS.NUMBERS.split(''),
+  Lowercase: CHAR_SETS.LOWERCASE.split(''),
+  Uppercase: CHAR_SETS.UPPERCASE.split(''),
+  Symbols: CHAR_SETS.SYMBOLS.split(''),
 };
 
 const excludedSet = computed(() => new Set(props.modelValue.split('')));

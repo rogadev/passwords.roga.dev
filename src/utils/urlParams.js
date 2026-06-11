@@ -1,5 +1,5 @@
-// Default password generation settings
-const DEFAULTS = {
+// Default password generation settings (shared with settingsStore)
+export const DEFAULTS = {
   length: 20,
   excludeLowercase: false,
   excludeNumbers: false,
@@ -50,15 +50,10 @@ export function getParamsFromURL() {
   settings.excludeSymbols = params.has(PARAM_KEYS.excludeSymbols);
   settings.ruleNoLeadingSpecial = params.has(PARAM_KEYS.ruleNoLeadingSpecial);
 
-  // Excluded characters (decode)
+  // Excluded characters (URLSearchParams already percent-decodes values)
   const excludedParam = params.get(PARAM_KEYS.excludedChars);
   if (excludedParam) {
-    try {
-      settings.excludedChars = decodeURIComponent(excludedParam);
-    } catch (e) {
-      console.error("Failed to decode excluded characters parameter:", e);
-      // Keep default empty string if decoding fails
-    }
+    settings.excludedChars = excludedParam;
   }
 
   return settings;
@@ -95,9 +90,10 @@ export function buildQueryString(settings) {
     params.set(PARAM_KEYS.ruleNoLeadingSpecial, '');
   }
 
-  // Only include excludedChars if it's not empty (default)
+  // Only include excludedChars if it's not empty (default).
+  // URLSearchParams percent-encodes the value when serialized.
   if (settings.excludedChars && settings.excludedChars !== DEFAULTS.excludedChars) {
-     params.set(PARAM_KEYS.excludedChars, encodeURIComponent(settings.excludedChars));
+     params.set(PARAM_KEYS.excludedChars, settings.excludedChars);
   }
 
   return params.toString();
@@ -125,10 +121,8 @@ export function updateURLParams(settings) {
   try {
     window.history.replaceState({}, '', newUrl);
   } catch (e) {
-    console.error("Failed to update URL:", e);
-    // Fallback in case replaceState fails
-    if (newQueryString) {
-      window.location.search = newQueryString;
-    }
+    // Safari throttles replaceState (~100 calls / 30s). A stale URL is
+    // harmless and self-corrects on the next update — never force a reload.
+    console.warn("Failed to update URL:", e);
   }
 }

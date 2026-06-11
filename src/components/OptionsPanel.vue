@@ -5,12 +5,15 @@ import { useSettings } from '../stores/settingsStore';
 // Use the shared store - both PasswordGenerator and OptionsPanel use the same reactive object
 const { settings, updateSetting, toggleSetting } = useSettings();
 
-// Length computed for v-model binding
+// Length computed for v-model binding.
+// Clamped to the generator's supported range (1-128); an empty/invalid
+// value mid-edit is ignored so typing isn't fought by the binding.
 const length = computed({
   get: () => settings.length,
   set: (val) => {
-    const newLength = parseInt(val) || 1;
-    updateSetting('length', newLength);
+    const parsed = parseInt(val, 10);
+    if (Number.isNaN(parsed)) return;
+    updateSetting('length', Math.min(128, Math.max(1, parsed)));
   },
 });
 
@@ -64,11 +67,11 @@ const ruleNoLeadingSpecial = computed({
           Password Length
         </label>
         <div class="flex items-center gap-2">
-          <input 
-            type="number" 
-            id="length-number" 
-            min="6" 
-            max="64" 
+          <input
+            type="number"
+            id="length-number"
+            min="1"
+            max="128"
             v-model.number="length"
             class="w-16 px-3 py-1.5 text-center text-sm font-mono font-medium rounded-lg input-base focus-ring"
             @focus="$event.target.select()" 
@@ -84,7 +87,6 @@ const ruleNoLeadingSpecial = computed({
           min="6" 
           max="64" 
           v-model.number="length"
-          @input="length = $event.target.value"
           class="w-full focus-ring rounded-lg"
           aria-labelledby="length-label"
         >

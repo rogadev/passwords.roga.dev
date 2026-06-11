@@ -20,6 +20,7 @@ Deployment is handled automatically by Vercel.
 **File**: `.github/workflows/unit-tests.yml`
 
 This workflow runs on every push to main/dev branches and on all pull requests. It:
+
 - Sets up Node.js and pnpm
 - Installs dependencies
 - Runs unit tests with Vitest (jsdom)
@@ -41,6 +42,7 @@ pnpm ready   # unit + browser + E2E tests, then a production build
 ### Deployment
 
 Deployment is handled automatically by Vercel. When changes are pushed to the main branch, Vercel automatically:
+
 - Detects the changes
 - Builds the application
 - Deploys to production at [passwords.roga.dev](https://passwords.roga.dev)

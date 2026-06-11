@@ -6,7 +6,7 @@ name: Guard main source branch
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   verify-source:

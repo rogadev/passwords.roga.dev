@@ -3,7 +3,7 @@ export const CHAR_SETS = {
   UPPERCASE: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
   NUMBERS: '0123456789',
   SYMBOLS: '!@#$%^&*()_+~`|}{[]:;?><,./-=\\',
-};
+}
 
 /**
  * Generates a cryptographically secure random integer between min (inclusive) and max (exclusive).
@@ -13,17 +13,17 @@ export const CHAR_SETS = {
  * @returns {number} A random integer.
  */
 function getRandomInt(min, max) {
-  const range = max - min;
-  if (range <= 0) return min;
+  const range = max - min
+  if (range <= 0) return min
   // Find the largest multiple of range that fits in 2^32 to reject values above it
-  const limit = Math.floor(0x100000000 / range) * range;
-  const randomBuffer = new Uint32Array(1);
-  let value;
+  const limit = Math.floor(0x100000000 / range) * range
+  const randomBuffer = new Uint32Array(1)
+  let value
   do {
-    crypto.getRandomValues(randomBuffer);
-    value = randomBuffer[0];
-  } while (value >= limit);
-  return (value % range) + min;
+    crypto.getRandomValues(randomBuffer)
+    value = randomBuffer[0]
+  } while (value >= limit)
+  return (value % range) + min
 }
 
 /**
@@ -32,8 +32,8 @@ function getRandomInt(min, max) {
  */
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
-    const j = getRandomInt(0, i + 1);
-    [array[i], array[j]] = [array[j], array[i]];
+    const j = getRandomInt(0, i + 1)
+    ;[array[i], array[j]] = [array[j], array[i]]
   }
 }
 
@@ -50,91 +50,97 @@ function shuffleArray(array) {
  * @returns {string} The generated password or an error message.
  */
 export function generatePassword(options) {
-  const { 
-    length, 
-    excludeLowercase = false, 
-    excludeUppercase = false, 
-    excludeNumbers = false, 
-    excludeSymbols = false, 
-    excludedChars = '', 
-    ruleNoLeadingSpecial
-  } = options;
+  const {
+    length,
+    excludeLowercase = false,
+    excludeUppercase = false,
+    excludeNumbers = false,
+    excludeSymbols = false,
+    excludedChars = '',
+    ruleNoLeadingSpecial,
+  } = options
 
   if (length <= 0 || length > 128) {
-    return "Error: Invalid length.";
+    return 'Error: Invalid length.'
   }
 
-  let charPool = '';
-  const requiredChars = [];
+  let charPool = ''
+  const requiredChars = []
 
-  const effectiveExcluded = new Set(excludedChars.split(''));
+  const effectiveExcluded = new Set(excludedChars.split(''))
 
-  const filterExcluded = (set) => set.split('').filter(char => !effectiveExcluded.has(char)).join('');
+  const filterExcluded = (set) =>
+    set
+      .split('')
+      .filter((char) => !effectiveExcluded.has(char))
+      .join('')
 
   // Include character sets that are not excluded
-  const lowercasePool = filterExcluded(CHAR_SETS.LOWERCASE);
+  const lowercasePool = filterExcluded(CHAR_SETS.LOWERCASE)
   if (!excludeLowercase && lowercasePool) {
-    charPool += lowercasePool;
-    requiredChars.push(lowercasePool[getRandomInt(0, lowercasePool.length)]);
+    charPool += lowercasePool
+    requiredChars.push(lowercasePool[getRandomInt(0, lowercasePool.length)])
   }
 
-  const uppercasePool = filterExcluded(CHAR_SETS.UPPERCASE);
+  const uppercasePool = filterExcluded(CHAR_SETS.UPPERCASE)
   if (!excludeUppercase && uppercasePool) {
-    charPool += uppercasePool;
-    requiredChars.push(uppercasePool[getRandomInt(0, uppercasePool.length)]);
+    charPool += uppercasePool
+    requiredChars.push(uppercasePool[getRandomInt(0, uppercasePool.length)])
   }
 
-  const numbersPool = filterExcluded(CHAR_SETS.NUMBERS);
+  const numbersPool = filterExcluded(CHAR_SETS.NUMBERS)
   if (!excludeNumbers && numbersPool) {
-    charPool += numbersPool;
-    requiredChars.push(numbersPool[getRandomInt(0, numbersPool.length)]);
+    charPool += numbersPool
+    requiredChars.push(numbersPool[getRandomInt(0, numbersPool.length)])
   }
 
-  const symbolsPool = filterExcluded(CHAR_SETS.SYMBOLS);
+  const symbolsPool = filterExcluded(CHAR_SETS.SYMBOLS)
   if (!excludeSymbols && symbolsPool) {
-    charPool += symbolsPool;
-    requiredChars.push(symbolsPool[getRandomInt(0, symbolsPool.length)]);
+    charPool += symbolsPool
+    requiredChars.push(symbolsPool[getRandomInt(0, symbolsPool.length)])
   }
 
   if (!charPool) {
-    return "Error: All character types excluded or all characters excluded.";
+    return 'Error: All character types excluded or all characters excluded.'
   }
 
   if (requiredChars.length > length) {
-    return "Error: Length too short to include all required character types.";
+    return 'Error: Length too short to include all required character types.'
   }
 
-  const password = [...requiredChars];
-  const remainingLength = length - requiredChars.length;
+  const password = [...requiredChars]
+  const remainingLength = length - requiredChars.length
 
   for (let i = 0; i < remainingLength; i++) {
-    password.push(charPool[getRandomInt(0, charPool.length)]);
+    password.push(charPool[getRandomInt(0, charPool.length)])
   }
 
-  shuffleArray(password);
+  shuffleArray(password)
 
   // Handle rules after shuffling
   if (ruleNoLeadingSpecial) {
-    const leadingCharIsSpecial = (numbersPool + symbolsPool).includes(password[0]);
+    const leadingCharIsSpecial = (numbersPool + symbolsPool).includes(
+      password[0],
+    )
     if (leadingCharIsSpecial) {
       // Only consider letter pools that are actually included in the password
       const allowedLeadingPool =
         (!excludeLowercase ? lowercasePool : '') +
-        (!excludeUppercase ? uppercasePool : '');
+        (!excludeUppercase ? uppercasePool : '')
       if (!allowedLeadingPool) {
-        return "Error: Cannot satisfy 'no leading special' rule with selected characters.";
+        return "Error: Cannot satisfy 'no leading special' rule with selected characters."
       }
       // A non-empty allowedLeadingPool means a letter set was enabled, so
       // requiredChars guaranteed at least one letter somewhere past index 0
       // (index 0 is special here). The search below therefore always succeeds.
       for (let i = 1; i < password.length; i++) {
-          if (allowedLeadingPool.includes(password[i])) {
-              [password[0], password[i]] = [password[i], password[0]];
-              break;
-          }
+        if (allowedLeadingPool.includes(password[i])) {
+          ;[password[0], password[i]] = [password[i], password[0]]
+          break
+        }
       }
     }
   }
 
-  return password.join('');
+  return password.join('')
 }

@@ -1,5 +1,5 @@
 <script setup>
-import PasswordGenerator from "./components/PasswordGenerator.vue";
+import PasswordGenerator from './components/PasswordGenerator.vue'
 </script>
 
 <template>

@@ -16,6 +16,7 @@ dist-ssr
 tests/browser/__screenshots__/
 test-results/
 playwright-report/
+.vitest-attachments/
 
 # Editor directories and files
 .vscode/*

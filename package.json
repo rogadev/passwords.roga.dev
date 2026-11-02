@@ -21,7 +21,7 @@
     "generate-pwa-assets": "pwa-assets-generator"
   },
   "dependencies": {
-    "vue": "^3.5.42"
+    "vue": "^3.5.44"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -33,7 +33,7 @@
     "@vitest/browser-playwright": "^4.1.12",
     "@vitest/eslint-plugin": "^1.6.23",
     "@vue/eslint-config-prettier": "^10.2.0",
-    "@vue/test-utils": "^2.5.0",
+    "@vue/test-utils": "^2.5.1",
     "autoprefixer": "^10.5.5",
     "eslint": "^10.10.0",
     "eslint-plugin-playwright": "^2.10.5",
@@ -103,7 +103,15 @@
       "workbox-build>glob": "^14.0.3",
       "js-beautify>glob": "^14.0.3",
       "@typescript-eslint/typescript-estree>minimatch": "^11.0.4",
-      "editorconfig>minimatch": "^11.0.4"
+      "editorconfig>minimatch": "^11.0.4",
+      "eslint>minimatch": "^11.0.4",
+      "@eslint/config-array>minimatch": "^11.0.4",
+      "filelist>minimatch": "^11.0.4"
+    },
+    "auditConfig": {
+      "ignoreGhsas": [
+        "GHSA-gcqx-w48m-w2h4"
+      ]
     }
   },
   "packageManager": "pnpm@10.28.0+sha512.05df71d1421f21399e053fde567cea34d446fa02c76571441bfc1c7956e98e363088982d940465fd34480d4d90a0668bc12362f8aa88000a64e83d0b0e47be48"
